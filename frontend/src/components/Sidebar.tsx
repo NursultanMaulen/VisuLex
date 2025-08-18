@@ -35,7 +35,7 @@ export default function Sidebar() {
           {[
             "Contract_A.pdf",
             "NDA_ClientB.pdf",
-            "Policy_Rev3.docx",
+            "Policy_abochert.docx",
             "Lease_2025.pdf",
           ].map((item, idx) => (
             <li key={idx}>
