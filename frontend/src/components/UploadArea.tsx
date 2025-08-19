@@ -1,11 +1,12 @@
 "use client";
 
-import { useMemo, useRef } from "react";
+import React, { useMemo, useRef } from "react";
 import { useUploads, formatFileSize } from "../app/UploadsContext";
 
 export default function UploadArea() {
   const inputRef = useRef<HTMLInputElement | null>(null);
-  const { uploads, addFiles, removeUpload, clearUploads } = useUploads();
+  const { uploads, addFiles, removeUpload, clearUploads, askOnUpload } =
+    useUploads();
   const hasUploads = uploads.length > 0;
   const totalSize = useMemo(
     () => uploads.reduce((acc, u) => acc + u.sizeBytes, 0),
@@ -72,6 +73,11 @@ export default function UploadArea() {
                       ? "Processed"
                       : u.status}
                   </div>
+                  <PerFileAsk
+                    id={u.id}
+                    onAsk={askOnUpload}
+                    disabled={u.status === "processing"}
+                  />
                 </div>
                 <button
                   className="text-xs px-2 py-1 rounded border border-black/10 dark:border-white/10 hover:bg-black/5 dark:hover:bg-white/10"
@@ -136,4 +142,41 @@ function Thumbnail({ itemId }: { itemId: string }) {
     return <div className={base}>PDF</div>;
   }
   return <div className={base}>FILE</div>;
+}
+
+function PerFileAsk({
+  id,
+  onAsk,
+  disabled,
+}: {
+  id: string;
+  onAsk: (id: string, q: string) => void;
+  disabled?: boolean;
+}) {
+  const [value, setValue] = React.useState("");
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        const q = value.trim();
+        if (!q) return;
+        onAsk(id, q);
+      }}
+      className="mt-2 flex items-center gap-2"
+    >
+      <input
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        placeholder="Ask about this document..."
+        className="flex-1 min-w-0 rounded border border-black/10 dark:border-white/10 bg-transparent px-2 py-1 text-xs"
+      />
+      <button
+        type="submit"
+        disabled={disabled}
+        className="text-xs px-2 py-1 rounded bg-black text-white disabled:opacity-50"
+      >
+        Ask
+      </button>
+    </form>
+  );
 }

@@ -17,6 +17,7 @@ export type UploadResult = {
   summary: string;
   highlights: string[];
   risk: RiskLevel;
+  risksExtracted: string[];
 };
 
 export type UploadItem = {
@@ -35,6 +36,7 @@ type UploadsContextValue = {
   addFiles: (files: File[] | FileList | null) => void;
   removeUpload: (id: string) => void;
   clearUploads: () => void;
+  askOnUpload: (id: string, question: string) => void;
 };
 
 const UploadsContext = createContext<UploadsContextValue | null>(null);
@@ -67,45 +69,67 @@ export function UploadsProvider({ children }: { children: React.ReactNode }) {
     return mod === 0 ? "Low" : mod === 1 ? "Medium" : "High";
   };
 
-  const mockGenerateResult = (item: UploadItem): UploadResult => {
+  const mockGenerateResult = (
+    item: UploadItem,
+    question?: string
+  ): UploadResult => {
     const readableSize = formatBytes(item.sizeBytes);
     if (item.kind === "pdf") {
       return {
-        summary: `PDF "${item.file.name}" (${readableSize}) processed. Found several key sections and dates.`,
+        summary: `PDF "${item.file.name}" (${readableSize}) processed${
+          question ? ` for question: "${question}"` : ""
+        }. Found several key sections and dates.`,
         highlights: [
           "Parties identified",
           "Effective date detected",
           "Payment terms extracted",
         ],
         risk: pickRisk(item),
+        risksExtracted: [
+          "Late payment penalties",
+          "Auto-renewal clause",
+          "Confidentiality breach conditions",
+        ],
       };
     }
     if (item.kind === "image") {
       return {
-        summary: `Image "${item.file.name}" analyzed. Text and visual elements detected.`,
+        summary: `Image "${item.file.name}" analyzed${
+          question ? ` for: "${question}"` : ""
+        }. Text and visual elements detected.`,
         highlights: [
           "OCR text extracted",
           "Logos found",
           "Signature-like region",
         ],
         risk: pickRisk(item),
+        risksExtracted: ["Illegible signature", "Mismatch of dates"],
       };
     }
     if (item.kind === "video") {
       return {
-        summary: `Video "${item.file.name}" transcribed and key moments detected.`,
+        summary: `Video "${item.file.name}" transcribed${
+          question ? ` and searched for: "${question}"` : ""
+        }. Key moments detected.`,
         highlights: [
           "Speaker segments",
           "Mentions of obligations",
           "Compliance keywords",
         ],
         risk: pickRisk(item),
+        risksExtracted: [
+          "Compliance risk: missing disclosure",
+          "Ambiguous commitment wording",
+        ],
       };
     }
     return {
-      summary: `"${item.file.name}" processed.`,
+      summary: `"${item.file.name}" processed${
+        question ? ` for: "${question}"` : ""
+      }.`,
       highlights: ["Content indexed"],
       risk: pickRisk(item),
+      risksExtracted: ["General risk placeholder"],
     };
   };
 
@@ -140,6 +164,22 @@ export function UploadsProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+  const askOnUpload = useCallback((id: string, question: string) => {
+    setUploads((prev) =>
+      prev.map((u) => (u.id === id ? { ...u, status: "processing" } : u))
+    );
+    const delay = 700 + Math.floor(Math.random() * 1200);
+    window.setTimeout(() => {
+      setUploads((prev) =>
+        prev.map((u) =>
+          u.id === id
+            ? { ...u, status: "done", result: mockGenerateResult(u, question) }
+            : u
+        )
+      );
+    }, delay);
+  }, []);
+
   const removeUpload = useCallback((id: string) => {
     setUploads((prev) => prev.filter((u) => u.id !== id));
     const url = objectUrlsRef.current.get(id);
@@ -163,8 +203,8 @@ export function UploadsProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const value = useMemo(
-    () => ({ uploads, addFiles, removeUpload, clearUploads }),
-    [uploads, addFiles, removeUpload, clearUploads]
+    () => ({ uploads, addFiles, removeUpload, clearUploads, askOnUpload }),
+    [uploads, addFiles, removeUpload, clearUploads, askOnUpload]
   );
 
   return (
