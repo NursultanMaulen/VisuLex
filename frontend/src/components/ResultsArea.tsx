@@ -34,22 +34,51 @@ export default function ResultsArea() {
           {done.map((u) => (
             <div
               key={u.id}
-              className="rounded-md border border-black/10 dark:border-white/10 p-3"
+              className="rounded-md border border-black/10 dark:border-white/10 p-0 overflow-hidden"
             >
-              <div className="text-sm font-medium truncate">{u.file.name}</div>
-              <div className="text-xs opacity-60 mb-2">
-                {u.result?.risk} risk
+              {/* Header */}
+              <div className="px-3 pt-3">
+                <div className="text-sm font-medium truncate">
+                  {u.file.name}
+                </div>
+                <div className="text-xs opacity-60 mb-2">
+                  {u.result?.risk} risk
+                </div>
               </div>
 
-              <div className="text-sm font-medium">Summary</div>
-              <p className="text-sm opacity-80 mt-1">{u.result?.summary}</p>
-
-              <div className="text-sm font-medium mt-3">Highlights</div>
-              <ul className="list-disc pl-5 text-sm opacity-80">
-                {u.result?.highlights.map((h, idx) => (
-                  <li key={idx}>{h}</li>
-                ))}
-              </ul>
+              {/* Body: side-by-side for media */}
+              {u.kind === "image" || u.kind === "video" ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-0">
+                  <div className="p-3 border-t md:border-t-0 md:border-r border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/5">
+                    {u.kind === "image" && u.objectUrl && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={u.objectUrl}
+                        alt="preview"
+                        className="w-full h-auto rounded"
+                      />
+                    )}
+                    {u.kind === "video" && u.objectUrl && (
+                      <video
+                        src={u.objectUrl}
+                        className="w-full rounded"
+                        controls
+                      />
+                    )}
+                  </div>
+                  <div className="p-3">
+                    <SectionSummary text={u.result?.summary} />
+                    <SectionHighlights items={u.result?.highlights || []} />
+                    <SectionRisks items={u.result?.risksExtracted || []} />
+                  </div>
+                </div>
+              ) : (
+                <div className="p-3 border-t border-black/10 dark:border-white/10">
+                  <SectionSummary text={u.result?.summary} />
+                  <SectionHighlights items={u.result?.highlights || []} />
+                  <SectionRisks items={u.result?.risksExtracted || []} />
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -88,6 +117,45 @@ function EmptyState() {
           ))}
         </div>
       </div>
+    </div>
+  );
+}
+
+function SectionSummary({ text }: { text: string | undefined }) {
+  return (
+    <div className="mb-3">
+      <div className="text-sm font-medium">Summary</div>
+      <p className="text-sm opacity-80 mt-1">{text}</p>
+    </div>
+  );
+}
+
+function SectionHighlights({ items }: { items: string[] }) {
+  return (
+    <div className="mb-3">
+      <div className="text-sm font-medium">Highlights</div>
+      <ul className="list-disc pl-5 text-sm opacity-80">
+        {items.map((h, idx) => (
+          <li key={idx}>{h}</li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function SectionRisks({ items }: { items: string[] }) {
+  return (
+    <div className="mb-1">
+      <div className="text-sm font-medium">Extracted risks</div>
+      {items.length === 0 ? (
+        <div className="text-sm opacity-60 mt-1">No risks detected.</div>
+      ) : (
+        <ul className="list-disc pl-5 text-sm opacity-80">
+          {items.map((r, idx) => (
+            <li key={idx}>{r}</li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
