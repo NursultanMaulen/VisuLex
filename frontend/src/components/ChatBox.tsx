@@ -6,6 +6,7 @@ import { useUploads } from "../app/UploadsContext";
 
 export default function ChatBox() {
   const [query, setQuery] = useState("");
+  const [apiResponse, setApiResponse] = useState<any>(null);
   const { uploads } = useUploads();
   const { askQuestion, loading, error } = useAskQuestion();
 
@@ -27,12 +28,21 @@ export default function ChatBox() {
         return;
       }
 
+      // Используем backendDocId если он есть, иначе используем локальный id
+      const docId = firstUpload.backendDocId || firstUpload.id;
+
+      if (!docId) {
+        alert("Документ не имеет ID для API!");
+        return;
+      }
+
       const response = await askQuestion({
-        doc_id: firstUpload.id,
+        doc_id: docId,
         question: query.trim(),
       });
 
       console.log("Ответ от API:", response);
+      setApiResponse(response); // Сохраняем ответ для отображения
       setQuery(""); // Очищаем поле после успешной отправки
     } catch (err) {
       console.error("Ошибка при отправке вопроса:", err);
@@ -76,6 +86,32 @@ export default function ChatBox() {
         </div>
         {error && (
           <div className="text-xs text-red-500 mt-2">Ошибка: {error}</div>
+        )}
+
+        {/* Отображение ответа от API */}
+        {apiResponse && (
+          <div className="mt-4 p-3 rounded-lg border border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-900/20">
+            <h3 className="text-sm font-semibold mb-2 text-green-800 dark:text-green-200">
+              Ответ от AI:
+            </h3>
+            <div className="space-y-2 text-sm">
+              <div>
+                <span className="font-medium">Вопрос:</span>{" "}
+                {apiResponse.question}
+              </div>
+              <div>
+                <span className="font-medium">Ответ:</span> {apiResponse.answer}
+              </div>
+              <div>
+                <span className="font-medium">Уверенность:</span>{" "}
+                {apiResponse.confidence?.toFixed(2)}%
+              </div>
+              <div>
+                <span className="font-medium">Сводка документа:</span>{" "}
+                {apiResponse.summary}
+              </div>
+            </div>
+          </div>
         )}
       </form>
     </section>

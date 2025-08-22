@@ -29,11 +29,17 @@ export type UploadItem = {
   status: "queued" | "processing" | "done" | "error";
   result?: UploadResult;
   errorMessage?: string;
+  backendDocId?: string; // ID документа от бэкенда
 };
 
 type UploadsContextValue = {
   uploads: UploadItem[];
   addFiles: (files: File[] | FileList | null) => void;
+  addFilesWithBackendId: (
+    files: File[] | FileList | null,
+    backendDocId: string,
+    apiResult?: any
+  ) => void;
   removeUpload: (id: string) => void;
   clearUploads: () => void;
   askOnUpload: (id: string, question: string) => void;
@@ -164,21 +170,131 @@ export function UploadsProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
-  const askOnUpload = useCallback((id: string, question: string) => {
-    setUploads((prev) =>
-      prev.map((u) => (u.id === id ? { ...u, status: "processing" } : u))
-    );
-    const delay = 700 + Math.floor(Math.random() * 1200);
-    window.setTimeout(() => {
+  const addFilesWithBackendId = useCallback(
+    (
+      input: File[] | FileList | null,
+      backendDocId: string,
+      apiResult?: any
+    ) => {
+      if (!input) return;
+      const arr = Array.from(input);
+      const newItems: UploadItem[] = arr.map((file) => {
+        const objectUrl = URL.createObjectURL(file);
+        objectUrlsRef.current.set(backendDocId, objectUrl);
+        return {
+          id: cryptoRandomId(), // Локальный ID для фронтенда
+          file,
+          objectUrl,
+          kind: detectKind(file),
+          sizeBytes: file.size,
+          status: "done", // Файл уже обработан бэкендом
+          backendDocId: backendDocId, // Сохраняем ID от бэкенда
+          result: apiResult
+            ? {
+                summary:
+                  apiResult.summary ||
+                  `Файл "${file.name}" успешно загружен и обработан`,
+                highlights: [
+                  "Текст извлечен",
+                  "Содержание сгенерировано",
+                  "Эмбеддинги созданы",
+                ],
+                risk: "Low" as RiskLevel,
+                risksExtracted: ["Нет рисков"],
+              }
+            : {
+                summary: `Файл "${file.name}" успешно загружен и обработан`,
+                highlights: [
+                  "Текст извлечен",
+                  "Содержание сгенерировано",
+                  "Эмбеддинги созданы",
+                ],
+                risk: "Low" as RiskLevel,
+                risksExtracted: ["Нет рисков"],
+              },
+        };
+      });
+      setUploads((prev) => [...prev, ...newItems]);
+    },
+    []
+  );
+
+  const askOnUpload = useCallback(
+    async (id: string, question: string) => {
+      // Находим загруженный файл
+      const upload = uploads.find((u) => u.id === id);
+      if (!upload) return;
+
+      // Если есть backendDocId, используем API
+      if (upload.backendDocId) {
+        try {
+          // Вызываем API для получения ответа
+          const response = await fetch(`http://localhost:8000/ask`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              doc_id: upload.backendDocId,
+              question: question,
+            }),
+          });
+
+          if (response.ok) {
+            const apiResult = await response.json();
+            console.log(`Ответ от API для вопроса "${question}":`, apiResult);
+
+            // Обновляем результат с ответом от API
+            setUploads((prev) =>
+              prev.map((u) =>
+                u.id === id
+                  ? {
+                      ...u,
+                      status: "done",
+                      result: {
+                        ...u.result,
+                        summary: apiResult.summary || u.result?.summary,
+                        risk: u.result?.risk || "Low", // Сохраняем существующий risk или используем "Low"
+                        highlights: [
+                          `Вопрос: ${question}`,
+                          `Ответ: ${apiResult.answer}`,
+                          `Уверенность: ${apiResult.confidence?.toFixed(2)}%`,
+                        ],
+                        risksExtracted: ["Ответ получен от AI модели"],
+                      },
+                    }
+                  : u
+              )
+            );
+            return; // Не выполняем mock логику
+          }
+        } catch (error) {
+          console.error("Ошибка при отправке вопроса:", error);
+        }
+      }
+
+      // Fallback: используем mock логику если API недоступен
       setUploads((prev) =>
-        prev.map((u) =>
-          u.id === id
-            ? { ...u, status: "done", result: mockGenerateResult(u, question) }
-            : u
-        )
+        prev.map((u) => (u.id === id ? { ...u, status: "processing" } : u))
       );
-    }, delay);
-  }, []);
+
+      const delay = 700 + Math.floor(Math.random() * 1200);
+      window.setTimeout(() => {
+        setUploads((prev) =>
+          prev.map((u) =>
+            u.id === id
+              ? {
+                  ...u,
+                  status: "done",
+                  result: mockGenerateResult(u, question),
+                }
+              : u
+          )
+        );
+      }, delay);
+    },
+    [uploads]
+  );
 
   const removeUpload = useCallback((id: string) => {
     setUploads((prev) => prev.filter((u) => u.id !== id));
@@ -203,8 +319,22 @@ export function UploadsProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const value = useMemo(
-    () => ({ uploads, addFiles, removeUpload, clearUploads, askOnUpload }),
-    [uploads, addFiles, removeUpload, clearUploads, askOnUpload]
+    () => ({
+      uploads,
+      addFiles,
+      addFilesWithBackendId,
+      removeUpload,
+      clearUploads,
+      askOnUpload,
+    }),
+    [
+      uploads,
+      addFiles,
+      addFilesWithBackendId,
+      removeUpload,
+      clearUploads,
+      askOnUpload,
+    ]
   );
 
   return (
