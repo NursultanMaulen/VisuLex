@@ -1,12 +1,18 @@
 "use client";
 
-import React, { useMemo, useRef } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import { useUploads, formatFileSize } from "../app/UploadsContext";
+import { useFileUpload } from "../api/hooks";
 
 export default function UploadArea() {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const { uploads, addFiles, removeUpload, clearUploads, askOnUpload } =
     useUploads();
+  const {
+    uploadFile,
+    loading: uploadLoading,
+    error: uploadError,
+  } = useFileUpload();
   const hasUploads = uploads.length > 0;
   const totalSize = useMemo(
     () => uploads.reduce((acc, u) => acc + u.sizeBytes, 0),
@@ -29,8 +35,17 @@ export default function UploadArea() {
           e.preventDefault();
           e.dataTransfer.dropEffect = "copy";
         }}
-        onDrop={(e) => {
+        onDrop={async (e) => {
           e.preventDefault();
+          const files = Array.from(e.dataTransfer.files);
+          for (const file of files) {
+            try {
+              const result = await uploadFile(file);
+              console.log("Файл загружен через API:", result);
+            } catch (err) {
+              console.error("Ошибка загрузки файла:", err);
+            }
+          }
           addFiles(e.dataTransfer.files);
         }}
       >
@@ -40,7 +55,20 @@ export default function UploadArea() {
           accept=".pdf,.png,.jpg,.jpeg,.mp4,.mov"
           className="hidden"
           multiple
-          onChange={(e) => addFiles(e.target.files)}
+          onChange={async (e) => {
+            if (e.target.files) {
+              const files = Array.from(e.target.files);
+              for (const file of files) {
+                try {
+                  const result = await uploadFile(file);
+                  console.log("Файл загружен через API:", result);
+                } catch (err) {
+                  console.error("Ошибка загрузки файла:", err);
+                }
+              }
+              addFiles(e.target.files);
+            }
+          }}
         />
         <div className="text-sm">
           Drag & drop files here, or
@@ -49,6 +77,12 @@ export default function UploadArea() {
           </span>
         </div>
         <div className="text-[11px] opacity-60 mt-1">Max 50MB per file</div>
+        {uploadLoading && (
+          <div className="text-xs text-blue-600 mt-2">Загрузка файла...</div>
+        )}
+        {uploadError && (
+          <div className="text-xs text-red-600 mt-2">Ошибка: {uploadError}</div>
+        )}
       </div>
 
       {hasUploads && (

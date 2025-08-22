@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useAskQuestion } from "../api/hooks";
 
 export default function ChatBox() {
   const [query, setQuery] = useState("");
