@@ -1,34 +1,28 @@
 // Типы для API
 
 export interface UploadResponse {
-  success: boolean;
-  documentId: string;
-  filename: string;
-  message: string;
+  doc_id: string;
+  summary: string;
 }
 
 export interface AskRequest {
+  doc_id: string;
   question: string;
-  documentId: string;
 }
 
 export interface AskResponse {
-  success: boolean;
+  doc_id: string;
+  question: string;
   answer: string;
-  sources: string[];
 }
 
 export interface DocumentHistory {
-  id: string;
   filename: string;
-  uploadDate: string;
   summary: string;
-  status: "processed" | "processing" | "error";
 }
 
 export interface HistoryResponse {
-  success: boolean;
-  documents: DocumentHistory[];
+  [doc_id: string]: DocumentHistory;
 }
 
 export interface ApiError {
