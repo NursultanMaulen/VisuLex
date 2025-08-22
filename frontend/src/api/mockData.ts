@@ -3,44 +3,30 @@
 import { UploadResponse, AskResponse, HistoryResponse } from "./types";
 
 export const mockUploadResponse: UploadResponse = {
-  success: true,
-  documentId: "doc_123",
-  filename: "sample_document.pdf",
-  message: "Документ успешно загружен и обработан",
+  doc_id: "doc_123",
+  summary: "Документ успешно загружен и обработан",
 };
 
 export const mockAskResponse: AskResponse = {
-  success: true,
+  doc_id: "doc_123",
+  question: "Что содержится в документе?",
   answer:
     "Это мок-ответ на ваш вопрос. В реальном приложении здесь будет ответ от Hugging Face модели.",
-  sources: ["sample_document.pdf - стр. 1-3"],
 };
 
 export const mockHistoryResponse: HistoryResponse = {
-  success: true,
-  documents: [
-    {
-      id: "doc_123",
-      filename: "sample_document.pdf",
-      uploadDate: "2024-01-15T10:30:00Z",
-      summary: "Документ содержит информацию о...",
-      status: "processed",
-    },
-    {
-      id: "doc_124",
-      filename: "another_document.docx",
-      uploadDate: "2024-01-14T15:45:00Z",
-      summary: "Документ описывает процесс...",
-      status: "processed",
-    },
-    {
-      id: "doc_125",
-      filename: "large_file.pdf",
-      uploadDate: "2024-01-15T11:00:00Z",
-      summary: "",
-      status: "processing",
-    },
-  ],
+  doc_123: {
+    filename: "sample_document.pdf",
+    summary: "Документ содержит информацию о...",
+  },
+  doc_124: {
+    filename: "another_document.docx",
+    summary: "Документ описывает процесс...",
+  },
+  doc_125: {
+    filename: "large_file.pdf",
+    summary: "Документ в процессе обработки...",
+  },
 };
 
 // Функция для имитации задержки сети

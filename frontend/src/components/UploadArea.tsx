@@ -6,8 +6,14 @@ import { useFileUpload } from "../api/hooks";
 
 export default function UploadArea() {
   const inputRef = useRef<HTMLInputElement | null>(null);
-  const { uploads, addFiles, removeUpload, clearUploads, askOnUpload } =
-    useUploads();
+  const {
+    uploads,
+    addFiles,
+    addFilesWithBackendId,
+    removeUpload,
+    clearUploads,
+    askOnUpload,
+  } = useUploads();
   const {
     uploadFile,
     loading: uploadLoading,
@@ -42,11 +48,14 @@ export default function UploadArea() {
             try {
               const result = await uploadFile(file);
               console.log("Файл загружен через API:", result);
+              // Сохраняем doc_id от бэкенда и результат API
+              addFilesWithBackendId([file], result.doc_id, result);
             } catch (err) {
               console.error("Ошибка загрузки файла:", err);
+              // Если API не работает, добавляем файл локально
+              addFiles(e.dataTransfer.files);
             }
           }
-          addFiles(e.dataTransfer.files);
         }}
       >
         <input
@@ -62,11 +71,14 @@ export default function UploadArea() {
                 try {
                   const result = await uploadFile(file);
                   console.log("Файл загружен через API:", result);
+                  // Сохраняем doc_id от бэкенда и результат API
+                  addFilesWithBackendId([file], result.doc_id, result);
                 } catch (err) {
                   console.error("Ошибка загрузки файла:", err);
+                  // Если API не работает, добавляем файл локально
+                  addFiles(e.target.files);
                 }
               }
-              addFiles(e.target.files);
             }
           }}
         />

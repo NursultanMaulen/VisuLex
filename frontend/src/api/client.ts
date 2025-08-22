@@ -16,7 +16,7 @@ import {
 
 // Конфигурация API
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK === "true" || true; // По умолчанию используем мок
+const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK === "true" || false; // По умолчанию используем реальный API
 
 // Утилита для обработки ошибок
 const handleResponse = async <T>(response: Response): Promise<T> => {
@@ -59,7 +59,11 @@ export class ApiClient {
   static async askQuestion(request: AskRequest): Promise<AskResponse> {
     if (USE_MOCK) {
       await simulateNetworkDelay();
-      return mockAskResponse;
+      return {
+        ...mockAskResponse,
+        doc_id: request.doc_id,
+        question: request.question,
+      };
     }
 
     const response = await fetch(`${API_BASE_URL}/ask`, {
@@ -93,7 +97,7 @@ export class ApiClient {
     }
 
     try {
-      const response = await fetch(`${API_BASE_URL}/health`, {
+      const response = await fetch(`${API_BASE_URL}/`, {
         method: "GET",
       });
       return response.ok;
